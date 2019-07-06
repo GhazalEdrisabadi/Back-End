@@ -55,3 +55,17 @@ class PostDetailSerializer(ModelSerializer):
         except:
             image = None
         return image
+
+
+class PostListSerializer(ModelSerializer):
+    user = UserDetailSerializer(read_only=True)
+
+    class Meta:
+        model = Post
+        fields = [
+            'user',
+            'title',
+            'content',
+            'publish',
+            'image',
+        ]
