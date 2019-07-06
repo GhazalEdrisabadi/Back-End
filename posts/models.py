@@ -6,6 +6,7 @@ from django.urls import reverse
 from django.utils.safestring import mark_safe
 from django.contrib.contenttypes.models import ContentType
 from django.conf import settings
+from django.utils.text import slugify
 from .utils import get_read_time
 
 
@@ -68,3 +69,15 @@ class Post(models.Model):
         instance = self
         content_type = ContentType.objects.get_for_model(instance.__class__)
         return content_type
+
+
+def create_slug(instance, new_slug=None):
+    slug = slugify(instance.title)
+    if new_slug is not None:
+        slug = new_slug
+    qs = Post.objects.filter(slug=slug).order_by("-id")
+    exists = qs.exists()
+    if exists:
+        new_slug = "%s-%s" % (slug, qs.first().id)
+        return create_slug(instance, new_slug=new_slug)
+    return slug
