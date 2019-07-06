@@ -10,6 +10,14 @@ from .forms import PostForm
 from .models import Post
 from django.utils import timezone
 
+from django.contrib.contenttypes.models import ContentType
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+
+from django.db.models import Q
+
+
+
+
 
 def post_create(request):
     if not request.user.is_staff or not request.user.is_superuser:
@@ -62,3 +70,36 @@ def post_delete(request, slug=None):
     instance.delete()
     messages.success(request, "Successfully deleted")
     return redirect("posts:list")
+
+
+def post_list(request):
+    today = timezone.now().date()
+    queryset_list = Post.objects.active()  # .order_by("-timestamp")
+    if request.user.is_staff or request.user.is_superuser:
+        queryset_list = Post.objects.all()
+
+    query = request.GET.get("q")
+    if query:
+        queryset_list = queryset_list.filter(
+            Q(title__icontains=query) |
+            Q(content__icontains=query) |
+            Q(user__first_name__icontains=query) |
+            Q(user__last_name__icontains=query)
+        ).distinct()
+    paginator = Paginator(queryset_list, 8)
+    page_request_var = "page"
+    page = request.GET.get(page_request_var)
+    try:
+        queryset = paginator.page(page)
+    except PageNotAnInteger:
+        queryset = paginator.page(1)
+    except EmptyPage:
+        queryset = paginator.page(paginator.num_pages)
+
+    context = {
+        "object_list": queryset,
+        "title": "List",
+        "page_request_var": page_request_var,
+        "today": today,
+    }
+    return render(request, "post_list.html", context)
